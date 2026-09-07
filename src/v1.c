@@ -2,11 +2,10 @@
 
 #include "raylib.h"
 #include <math.h>
+#include <stdbool.h>
 
 const int SCREEN_WIDTH = 800;
 const int SCREEN_HEIGHT = 600;
-
-Vector2 origin = {SCREEN_WIDTH/2.0f, 0};
 
 int main(void) {
 
@@ -15,35 +14,98 @@ int main(void) {
     SetTargetFPS(60);
 
     // pendulum
-    int len = 300; // length of pendulum's rigid arm
+    int len = 0; // length of pendulum's rigid arm
     int radius = 30; // radius of pendulum's bob
-    float angle = PI/4.0f; // inital angle
+    float angle = 0; // inital angle
     float angleV = 0.0; // angular vel
     float angleA = 0.0; // angular acc
     float gravity = 9.8; // gravity
-    float mass = 0.40; // mass of bob
+    float mass = 0.9; // mass of bob
+    float damping = 0.99; // damping
+    Vector2 origin = {0,0}; // origin position
     Vector2 line = {0,0}; // line position
     Vector2 bob = {0,0}; // bob position
+
+    bool isDrawing = false; // to draw line
+    bool start = false; // to start calc
+    bool isDragging = false; // for dragging bob
 
 
     // loop    
     while (!WindowShouldClose()) {
 
-        bob.x = len * sin(angle) + origin.x;
-        bob.y = len * cos(angle) + origin.y;
+        Vector2 mousePos = GetMousePosition();
 
-        line.x = bob.x; line.y = bob.y;
+        if(IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+            isDrawing = true;
 
-        angleA = -mass*gravity*sin(angle)/len; // calc angular acc
+            if(!start) {
+                origin = mousePos;
+                line = mousePos;
+            }
 
-        angleV += angleA;
-        angle += angleV;
+            if(!isDragging) {
+                if(CheckCollisionPointCircle(mousePos, bob, radius)) {
+                    isDragging = true;
+                }
+            }
+        }
+
+        if(isDrawing) {
+            line = mousePos;
+
+            if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT)) {
+                isDrawing = false;
+                start = true;
+
+                // calc angle between line and verticle axis
+                float dx = line.x - origin.x; 
+                float dy = line.y - origin.y;
+                angle = atan2f(dx, dy);
+
+                // calc length of line
+                len = sqrt(pow((origin.x - line.x), 2) + pow((origin.y - line.y), 2));
+            }
+        }
+
+        if(isDragging) {
+            Vector2 delta = GetMouseDelta();
+            bob.x += delta.x; bob.y += delta.y;
+            line.x = bob.x; line.y = bob.y;
+
+            if(IsMouseButtonReleased(MOUSE_BUTTON_LEFT)) {
+                isDragging = false;
+            }
+        }
+
+        // main calc for pendulum
+        if(start && !isDragging) {
+            bob.x = len * sin(angle) + origin.x;
+            bob.y = len * cos(angle) + origin.y;
+
+            line.x = bob.x; line.y = bob.y;
+
+            angleA = -mass*gravity*sin(angle)/len; // calc angular acc
+
+            angleV += angleA;
+            angleV *= damping;
+            angle += angleV;
+        }
 
         BeginDrawing();
 
             ClearBackground(RAYWHITE);
+            
             DrawLineEx(origin, line, 7, BLACK);
-            DrawCircleV(bob, radius, SKYBLUE);
+            if(!(bob.x == 0 && bob.y == 0)) {
+                DrawCircleV(bob, radius, isDragging ? RED : SKYBLUE);
+            }
+
+            DrawText(TextFormat("len: %d", len), 10, 10, 24, BLACK);
+            DrawText(TextFormat("bob.x | bob.y: %f %f", bob.x, bob.y), 10, 32, 24, BLACK);
+            DrawText(TextFormat("origin.x | origin.y: %f %f", origin.x, origin.y), 10, 52, 24, BLACK);
+            DrawText(TextFormat("line.x | line.y: %f %f", line.x, line.y), 10, 72, 24, BLACK);
+            DrawText(TextFormat("angle: %f", angle*180/PI), 10, 92, 24, BLACK);
 
         EndDrawing();
 
