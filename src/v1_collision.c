@@ -28,8 +28,6 @@ int main(void) {
 
     bool isDrawing = false; // to draw line
     bool start = false; // to start calc
-    bool isDragging = false; // for dragging bob
-
 
     // loop    
     while (!WindowShouldClose()) {
@@ -42,12 +40,6 @@ int main(void) {
             if(!start) {
                 origin = mousePos;
                 line = mousePos;
-            }
-
-            if(!isDragging) {
-                if(CheckCollisionPointCircle(mousePos, bob, radius)) {
-                    isDragging = true;
-                }
             }
         }
 
@@ -68,18 +60,8 @@ int main(void) {
             }
         }
 
-        if(isDragging) {
-            Vector2 delta = GetMouseDelta();
-            bob.x += delta.x; bob.y += delta.y;
-            line.x = bob.x; line.y = bob.y;
-
-            if(IsMouseButtonReleased(MOUSE_BUTTON_LEFT)) {
-                isDragging = false;
-            }
-        }
-
         // main calc for pendulum
-        if(start && !isDragging) {
+        if(start) {
             bob.x = len * sin(angle) + origin.x;
             bob.y = len * cos(angle) + origin.y;
 
@@ -99,7 +81,7 @@ int main(void) {
             DrawLineEx(origin, line, 4, BLACK);
             DrawLineEx((Vector2){origin.x-10, origin.y}, (Vector2) {origin.x+10, origin.y}, 4, BLACK);
             if(!(bob.x == 0 && bob.y == 0)) {
-                DrawCircleV(bob, radius, isDragging ? RED : SKYBLUE);
+                DrawCircleV(bob, radius, SKYBLUE);
             }
 
             DrawText(TextFormat("len: %d", len), 10, 10, 24, BLACK);
